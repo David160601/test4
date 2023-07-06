@@ -4,6 +4,8 @@ import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,8 +31,10 @@ public class ProductController {
     }
 
     @GetMapping("")
-    List<ProductDto> getProducts() {
-        return this.productService.getProducts();
+    Page<ProductDto> getProducts(@RequestParam(required = false) String brandId,
+                                 @RequestParam(required = false) String page,
+                                 @RequestParam(required = false) String limit) {
+        return this.productService.getProducts(brandId, page, limit);
     }
 
     @DeleteMapping("/{id}")
@@ -40,6 +44,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     ProductDto updateProduct(@PathVariable("id") long id, @RequestBody() ProductDto productDto) {
+
         return this.productService.updateProduct(id, productDto);
     }
 }

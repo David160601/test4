@@ -7,11 +7,17 @@ import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.modelmapper.TypeToken;
 
@@ -82,11 +88,23 @@ public class ProductService {
         productRepo.delete(product);
     }
 
-    List<ProductDto> getProducts() {
-        Type listType = new TypeToken<List<ProductDto>>() {
-        }.getType();
-        List<Product> products = this.productRepo.findAll();
-        return modelMapper.map(products, listType);
+    Page<ProductDto> getProducts(String brandId, String page, String limit) {
+        int pageNumber = page != null ? Integer.parseInt(page) : 1;
+        int pageSize = limit != null ? Integer.parseInt(limit) : 10;
+        Specification<Product> spec = Specification.where(null);
+        if (brandId != null) {
+            long parsedBrandId = Long.parseLong(brandId);
+            spec = spec.and(hasBrandId(parsedBrandId));
+        }
+        Pageable pageable=PageRequest.of(pageNumber - 1, pageSize);
+        Page<Product> products = this.productRepo.findAll(spec,pageable);
+        Page<ProductDto> productDTOs = products.map(product -> modelMapper.map(product, ProductDto.class));
+        return productDTOs;
     }
+
+    private static Specification<Product> hasBrandId(long brandId) {
+        return (root, query, builder) -> builder.equal(root.get("brand").get("id"), brandId);
+    }
+
 
 }
