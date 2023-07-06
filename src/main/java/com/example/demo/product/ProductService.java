@@ -5,20 +5,16 @@ import com.example.demo.brand.BrandService;
 import com.example.demo.exception.ApiRequestException;
 import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
-import jdk.jfr.Category;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 
-import org.modelmapper.ModelMapper;
 import org.modelmapper.TypeToken;
 
-import java.lang.reflect.Type;
 
 @Service
 public class ProductService {
@@ -69,9 +65,14 @@ public class ProductService {
         if (productDto.getPrice() != product.getPrice()) {
             product.setPrice(productDto.getPrice());
         }
-        if (productDto.getQty() != productDto.getQty()) {
+        if (productDto.getQty() != product.getQty()) {
             product.setQty(productDto.getQty());
         }
+        if (productDto.getBrandId() != null) {
+            Brand brand = this.brandService.getBrand(product.getId());
+            product.setBrand(brand);
+        }
+
         product = this.productRepo.save(product);
         return modelMapper.map(product, ProductDto.class);
     }
