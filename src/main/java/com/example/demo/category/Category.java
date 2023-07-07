@@ -1,8 +1,10 @@
-package com.example.demo.brand;
+package com.example.demo.category;
 
 
+import com.example.demo.product.Product;
 import jakarta.persistence.*;
 import lombok.*;
+
 
 
 @Getter
@@ -11,8 +13,9 @@ import lombok.*;
 @AllArgsConstructor
 @ToString
 @Entity
-@Table(name = "brand")
-public class Brand {
+@Table(name = "category")
+public class Category {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;

@@ -2,24 +2,19 @@ package com.example.demo.product;
 
 import com.example.demo.brand.Brand;
 import com.example.demo.brand.BrandService;
+import com.example.demo.category.Category;
+import com.example.demo.category.CategoryService;
 import com.example.demo.exception.ApiRequestException;
 import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.modelmapper.TypeToken;
 
 
 @Service
@@ -27,12 +22,14 @@ public class ProductService {
     private final ProductRepo productRepo;
     private final ModelMapper modelMapper;
     private final BrandService brandService;
+    private final CategoryService categoryService;
 
     @Autowired
-    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService) {
+    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService, CategoryService categoryService) {
         this.productRepo = productRepo;
         this.modelMapper = modelMapper;
         this.brandService = brandService;
+        this.categoryService = categoryService;
     }
 
     ProductDto createProduct(CreateProductDto createProductDto) {
@@ -47,6 +44,12 @@ public class ProductService {
         newProduct.setDescription(createProductDto.getDescription());
         newProduct.setQty(createProductDto.getQty());
         newProduct.setPrice(createProductDto.getPrice());
+        if (createProductDto.getCategoryIds() != null) {
+            for (int i : createProductDto.getCategoryIds()) {
+                Category category = this.categoryService.getCategory(i);
+                newProduct.addCategory(category);
+            }
+        }
         newProduct = productRepo.save(newProduct);
         return modelMapper.map(newProduct, ProductDto.class);
     }
@@ -78,7 +81,18 @@ public class ProductService {
             Brand brand = this.brandService.getBrand(product.getId());
             product.setBrand(brand);
         }
-
+        if (productDto.getAddCategoryIds() != null) {
+            for (int i : productDto.getAddCategoryIds()) {
+                Category category = this.categoryService.getCategory(i);
+                product.addCategory(category);
+            }
+        }
+        if (productDto.getDeleteCategoryIds() != null) {
+            for (int i : productDto.getDeleteCategoryIds()) {
+                Category category = this.categoryService.getCategory(i);
+                product.removeCategory(category);
+            }
+        }
         product = this.productRepo.save(product);
         return modelMapper.map(product, ProductDto.class);
     }

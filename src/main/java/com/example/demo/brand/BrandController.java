@@ -39,7 +39,7 @@ public class BrandController {
         return this.brandService.updateBrand(id, brandDto);
     }
     @GetMapping()
-    List<Brand> getBrands() {
+    List<BrandDto> getBrands() {
         return this.brandService.getBrands();
     }
 }

@@ -5,9 +5,11 @@ import com.example.demo.brand.dto.CreateBrandDto;
 import com.example.demo.exception.ApiRequestException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,13 +35,19 @@ public class BrandService {
         return modelMapper.map(this.getBrand(id), BrandDto.class);
     }
 
-   public Brand getBrand(long id) {
+    public Brand getBrand(long id) {
         return this.brandRepo.findById(id).orElseThrow(() -> new ApiRequestException("Brand not found", HttpStatus.NOT_FOUND));
     }
 
     void deleteBrand(long id) {
-        Brand deleteBrand = this.getBrand(id);
-        brandRepo.delete(deleteBrand);
+        try {
+            Brand deleteBrand = this.getBrand(id);
+            brandRepo.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+
+            throw new ApiRequestException(e.getMessage(), HttpStatus.CONFLICT);
+        }
+
     }
 
     BrandDto updateBrand(long id, BrandDto brandDto) {
@@ -54,8 +62,13 @@ public class BrandService {
         return modelMapper.map(updateBrand, BrandDto.class);
     }
 
-    List<Brand> getBrands() {
+    List<BrandDto> getBrands() {
         List<Brand> brands = this.brandRepo.findAll();
-        return brands;
+        List<BrandDto> brandDtos = new ArrayList<>();
+        for (Brand brand : brands) {
+            BrandDto brandDto = modelMapper.map(brand, BrandDto.class);
+            brandDtos.add(brandDto);
+        }
+        return brandDtos;
     }
 }
