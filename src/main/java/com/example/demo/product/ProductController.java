@@ -33,8 +33,10 @@ public class ProductController {
     @GetMapping("")
     Page<ProductDto> getProducts(@RequestParam(required = false) String brandId,
                                  @RequestParam(required = false) String page,
-                                 @RequestParam(required = false) String limit) {
-        return this.productService.getProducts(brandId, page, limit);
+                                 @RequestParam(required = false) String limit,
+                                 @RequestParam(required = false) String title
+    ) {
+        return this.productService.getProducts(brandId, page, limit, title);
     }
 
     @DeleteMapping("/{id}")

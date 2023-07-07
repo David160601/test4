@@ -88,7 +88,7 @@ public class ProductService {
         productRepo.delete(product);
     }
 
-    Page<ProductDto> getProducts(String brandId, String page, String limit) {
+    Page<ProductDto> getProducts(String brandId, String page, String limit, String title) {
         int pageNumber = page != null ? Integer.parseInt(page) : 1;
         int pageSize = limit != null ? Integer.parseInt(limit) : 10;
         Specification<Product> spec = Specification.where(null);
@@ -96,8 +96,11 @@ public class ProductService {
             long parsedBrandId = Long.parseLong(brandId);
             spec = spec.and(hasBrandId(parsedBrandId));
         }
-        Pageable pageable=PageRequest.of(pageNumber - 1, pageSize);
-        Page<Product> products = this.productRepo.findAll(spec,pageable);
+        if (title != null) {
+            spec = spec.and(hasTitle(title));
+        }
+        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
+        Page<Product> products = this.productRepo.findAll(spec, pageable);
         Page<ProductDto> productDTOs = products.map(product -> modelMapper.map(product, ProductDto.class));
         return productDTOs;
     }
@@ -106,5 +109,8 @@ public class ProductService {
         return (root, query, builder) -> builder.equal(root.get("brand").get("id"), brandId);
     }
 
+    private static Specification<Product> hasTitle(String title) {
+        return (root, query, builder) -> builder.like(root.get("title"), "%" + title.toLowerCase() + "%");
+    }
 
 }
