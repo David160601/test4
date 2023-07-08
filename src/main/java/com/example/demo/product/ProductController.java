@@ -34,9 +34,11 @@ public class ProductController {
     Page<ProductDto> getProducts(@RequestParam(required = false) String brandId,
                                  @RequestParam(required = false) String page,
                                  @RequestParam(required = false) String limit,
-                                 @RequestParam(required = false) String title
+                                 @RequestParam(required = false) String title,
+                                 @RequestParam(required = false) String categoryId
+
     ) {
-        return this.productService.getProducts(brandId, page, limit, title);
+        return this.productService.findByTitleAndBrandIdAndCategoryId(title, brandId, categoryId, page, limit);
     }
 
     @DeleteMapping("/{id}")
