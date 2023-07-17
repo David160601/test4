@@ -36,7 +36,6 @@ public class ProductService {
         Product newProduct = new Product();
         Long brandId = createProductDto.getBrandId();
         if (brandId != null && brandId != 0) {
-            System.out.println(brandId);
             Brand brand = this.brandService.getBrand(createProductDto.getBrandId());
             newProduct.setBrand(brand);
         }

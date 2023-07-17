@@ -2,6 +2,7 @@ package com.example.demo.brand.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
 @Setter
@@ -11,6 +12,5 @@ import lombok.*;
 public class CreateBrandDto {
     @NotBlank
     String title;
-    @NotBlank
-    String imgUrl;
+    MultipartFile img;
 }

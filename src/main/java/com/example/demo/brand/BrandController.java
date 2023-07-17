@@ -3,9 +3,11 @@ package com.example.demo.brand;
 
 import com.example.demo.brand.dto.BrandDto;
 import com.example.demo.brand.dto.CreateBrandDto;
+import com.example.demo.validation.ImageValidator;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -19,9 +21,14 @@ public class BrandController {
         this.brandService = brandService;
     }
 
+    //    @PostMapping()
+//    BrandDto createBrand(@RequestBody @Valid CreateBrandDto createBrandDto) {
+//        return this.brandService.createBrand(createBrandDto);
+//    }
     @PostMapping()
-    BrandDto createBrand(@RequestBody @Valid CreateBrandDto createBrandDto) {
-        return this.brandService.createBrand(createBrandDto);
+    void createBrand(@RequestBody @Valid CreateBrandDto createBrandDto, @RequestParam("image") MultipartFile img) {
+        boolean isImage= ImageValidator.validateImage(img);
+        System.out.println(isImage);
     }
 
     @GetMapping("/{id}")
@@ -38,6 +45,7 @@ public class BrandController {
     BrandDto updateBrand(@PathVariable("id") long id, @RequestBody() @Valid BrandDto brandDto) {
         return this.brandService.updateBrand(id, brandDto);
     }
+
     @GetMapping()
     List<BrandDto> getBrands() {
         return this.brandService.getBrands();

@@ -26,7 +26,7 @@ public class BrandService {
     BrandDto createBrand(CreateBrandDto createBrandDto) {
         Brand newBrand = new Brand();
         newBrand.setTitle(createBrandDto.getTitle());
-        newBrand.setImgUrl(createBrandDto.getImgUrl());
+        newBrand.setImgUrl("testing");
         newBrand = brandRepo.save(newBrand);
         return modelMapper.map(newBrand, BrandDto.class);
     }
@@ -44,7 +44,6 @@ public class BrandService {
             Brand deleteBrand = this.getBrand(id);
             brandRepo.deleteById(id);
         } catch (DataIntegrityViolationException e) {
-
             throw new ApiRequestException(e.getMessage(), HttpStatus.CONFLICT);
         }
 
