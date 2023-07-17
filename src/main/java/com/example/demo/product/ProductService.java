@@ -7,14 +7,23 @@ import com.example.demo.category.CategoryService;
 import com.example.demo.exception.ApiRequestException;
 import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Service
@@ -23,13 +32,15 @@ public class ProductService {
     private final ModelMapper modelMapper;
     private final BrandService brandService;
     private final CategoryService categoryService;
+    private final EntityManager entityManager;
 
     @Autowired
-    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService, CategoryService categoryService) {
+    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService, CategoryService categoryService, JdbcTemplate jdbcTemplate, EntityManager entityManager) {
         this.productRepo = productRepo;
         this.modelMapper = modelMapper;
         this.brandService = brandService;
         this.categoryService = categoryService;
+        this.entityManager = entityManager;
     }
 
     ProductDto createProduct(CreateProductDto createProductDto) {
@@ -101,29 +112,43 @@ public class ProductService {
         productRepo.delete(product);
     }
 
-    Page<ProductDto> getProducts(String brandId, String page, String limit, String title) {
-        int pageNumber = page != null ? Integer.parseInt(page) : 1;
-        int pageSize = limit != null ? Integer.parseInt(limit) : 10;
-        Specification<Product> spec = Specification.where(null);
-        if (brandId != null) {
-            long parsedBrandId = Long.parseLong(brandId);
-            spec = spec.and(hasBrandId(parsedBrandId));
-        }
+    public Page<ProductDto> findByTitleAndBrandIdAndCategoryId(String title, String brandId, String categoryId, String page, String limit) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        QProduct qProduct = QProduct.product;
+        BooleanExpression predicate = null;
+        int newPage = page == null ? 1 : Integer.parseInt(page);
+        int newLimit = limit == null ? 10 : Integer.parseInt(limit);
         if (title != null) {
-            spec = spec.and(hasTitle(title));
+            predicate = qProduct.title.eq(title);
         }
-        Pageable pageable = PageRequest.of(pageNumber - 1, pageSize);
-        Page<Product> products = this.productRepo.findAll(spec, pageable);
-        Page<ProductDto> productDTOs = products.map(product -> modelMapper.map(product, ProductDto.class));
-        return productDTOs;
+        if (brandId != null && !brandId.isEmpty()) {
+            Brand brand = entityManager.find(Brand.class, Long.parseLong(brandId));
+            if (brand == null) {
+               throw new ApiRequestException("Brand not found",HttpStatus.NOT_FOUND);
+            }
+            predicate = predicate.and(qProduct.brand.eq(brand));
+        }
+        if (categoryId != null && !categoryId.isEmpty()) {
+            Category category = entityManager.find(Category.class, Long.parseLong(categoryId));
+            if (category == null) {
+                throw new ApiRequestException("Category not found",HttpStatus.NOT_FOUND);
+            }
+            predicate = predicate.and(qProduct.categoryList.contains(category));
+        }
+        long total = queryFactory.selectFrom(qProduct)
+                .where(predicate)
+                .fetchCount();
+        List<Product> products = queryFactory.selectFrom(qProduct)
+                .where(predicate).offset((long) (newPage - 1) * newLimit).limit(newLimit)
+                .fetch();
+
+        List<ProductDto> productDtos = new ArrayList<>();
+        for (Product item : products) {
+            productDtos.add(modelMapper.map(item, ProductDto.class));
+
+        }
+        return new PageImpl<ProductDto>(productDtos, PageRequest.of(newPage - 1, newLimit), total);
     }
 
-    private static Specification<Product> hasBrandId(long brandId) {
-        return (root, query, builder) -> builder.equal(root.get("brand").get("id"), brandId);
-    }
-
-    private static Specification<Product> hasTitle(String title) {
-        return (root, query, builder) -> builder.like(root.get("title"), "%" + title.toLowerCase() + "%");
-    }
 
 }
