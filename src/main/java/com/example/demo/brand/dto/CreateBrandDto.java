@@ -1,5 +1,6 @@
 package com.example.demo.brand.dto;
 
+import com.example.demo.validation.ImageValidation;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,5 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class CreateBrandDto {
     @NotBlank
     String title;
-    MultipartFile img;
+    @ImageValidation
+    MultipartFile image;
 }

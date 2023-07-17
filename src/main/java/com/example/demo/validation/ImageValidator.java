@@ -1,5 +1,7 @@
 package com.example.demo.validation;
 
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,12 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 @Getter
 @Setter
 @AllArgsConstructor
-public class ImageValidator {
-    public static boolean validateImage(MultipartFile img) {
+public class ImageValidator implements ConstraintValidator<ImageValidation, MultipartFile> {
+    public boolean isValid(MultipartFile img, ConstraintValidatorContext cxt) {
         if (img == null || img.isEmpty()) {
             return false;
         }
-        if(!isImageExtension(img.getName())){
+        if (!isImageExtension(img.getOriginalFilename())) {
             return false;
         }
         return true;
