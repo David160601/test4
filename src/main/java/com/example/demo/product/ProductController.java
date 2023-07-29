@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 @RestController
 @RequestMapping(path = "/product")
@@ -46,7 +48,6 @@ public class ProductController {
 
     @PutMapping("/{id}")
     ProductDto updateProduct(@PathVariable("id") long id, @RequestBody() ProductDto productDto) {
-
         return this.productService.updateProduct(id, productDto);
     }
 }

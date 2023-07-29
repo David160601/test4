@@ -2,13 +2,13 @@ package com.example.demo.product;
 
 import com.example.demo.brand.Brand;
 import com.example.demo.brand.BrandService;
+import com.example.demo.brand.dto.BrandDto;
 import com.example.demo.category.Category;
 import com.example.demo.category.CategoryService;
+import com.example.demo.category.dto.CategoryDto;
 import com.example.demo.exception.ApiRequestException;
 import com.example.demo.product.dto.CreateProductDto;
 import com.example.demo.product.dto.ProductDto;
-import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +16,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -33,14 +31,16 @@ public class ProductService {
     private final BrandService brandService;
     private final CategoryService categoryService;
     private final EntityManager entityManager;
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService, CategoryService categoryService, JdbcTemplate jdbcTemplate, EntityManager entityManager) {
+    ProductService(ProductRepo productRepo, ModelMapper modelMapper, BrandService brandService, CategoryService categoryService, NamedParameterJdbcTemplate namedParameterJdbcTemplate, EntityManager entityManager) {
         this.productRepo = productRepo;
         this.modelMapper = modelMapper;
         this.brandService = brandService;
         this.categoryService = categoryService;
         this.entityManager = entityManager;
+        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
     ProductDto createProduct(CreateProductDto createProductDto) {
@@ -113,42 +113,69 @@ public class ProductService {
     }
 
     public Page<ProductDto> findByTitleAndBrandIdAndCategoryId(String title, String brandId, String categoryId, String page, String limit) {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        QProduct qProduct = QProduct.product;
-        BooleanExpression predicate = null;
-        int newPage = page == null ? 1 : Integer.parseInt(page);
-        int newLimit = limit == null ? 10 : Integer.parseInt(limit);
-        if (title != null) {
-            predicate = qProduct.title.eq(title);
-        }
-        if (brandId != null && !brandId.isEmpty()) {
-            Brand brand = entityManager.find(Brand.class, Long.parseLong(brandId));
-            if (brand == null) {
-               throw new ApiRequestException("Brand not found",HttpStatus.NOT_FOUND);
-            }
-            predicate = predicate.and(qProduct.brand.eq(brand));
-        }
-        if (categoryId != null && !categoryId.isEmpty()) {
-            Category category = entityManager.find(Category.class, Long.parseLong(categoryId));
-            if (category == null) {
-                throw new ApiRequestException("Category not found",HttpStatus.NOT_FOUND);
-            }
-            predicate = predicate.and(qProduct.categoryList.contains(category));
-        }
-        long total = queryFactory.selectFrom(qProduct)
-                .where(predicate)
-                .fetchCount();
-        List<Product> products = queryFactory.selectFrom(qProduct)
-                .where(predicate).offset((long) (newPage - 1) * newLimit).limit(newLimit)
-                .fetch();
-
-        List<ProductDto> productDtos = new ArrayList<>();
-        for (Product item : products) {
-            productDtos.add(modelMapper.map(item, ProductDto.class));
-
-        }
-        return new PageImpl<ProductDto>(productDtos, PageRequest.of(newPage - 1, newLimit), total);
+        int pageablelimit = limit == null ? 10 : Integer.parseInt(limit);
+        int pageablePage = page == null ? 0 : Integer.parseInt(page) - 1;
+        MapSqlParameterSource productParam = new MapSqlParameterSource()
+                .addValue("TITLE", title == null ? "" : title)
+                .addValue("BRAND_ID", brandId == null ? 0 : Integer.parseInt(brandId))
+                .addValue("CATEGORY_ID", categoryId == null ? 0 : Integer.parseInt(categoryId))
+                .addValue("LIMIT", pageablelimit)
+                .addValue("OFFSET", pageablePage);
+        String GET_PRODUCTS_SQL = "SELECT DISTINCT\n" +
+                "P.id,\n" +
+                "P.title,\n" +
+                "P.description,\n" +
+                "P.price,\n" +
+                "P.qty,\n" +
+                "B.id AS brand_id,\n" +
+                "B.title AS brand_title,\n" +
+                "B.img_url AS brand_imgUrl\n" +
+                "FROM product AS P\n" +
+                "INNER JOIN brand AS B\n" +
+                "ON P.brand_id = B.id\n" +
+                "INNER JOIN product_category_list AS PC\n" +
+                "ON P.id = PC.product_id\n" +
+                "WHERE LOWER(P.title) LIKE CONCAT('%', :TITLE, '%')\n" +
+                "AND :BRAND_ID in (0,P.brand_id)\n" +
+                "AND :CATEGORY_ID in (0,PC.category_id)\n";
+        String COUNT_QUERY = "SELECT COUNT(*) FROM (" + GET_PRODUCTS_SQL + ") AS countQuery";
+        String paginatedQuery = GET_PRODUCTS_SQL + " ORDER BY P.id LIMIT :LIMIT OFFSET :OFFSET";
+        int totalCount = this.namedParameterJdbcTemplate.queryForObject(COUNT_QUERY, productParam, Integer.class);
+        List<ProductDto> productDtos = this.namedParameterJdbcTemplate.query(paginatedQuery, productParam, (rs, rowNum) -> {
+            ProductDto productDto = new ProductDto();
+            productDto.setId(rs.getLong("id"));
+            productDto.setTitle(rs.getString("title"));
+            productDto.setDescription(rs.getString("description"));
+            productDto.setPrice(rs.getInt("price"));
+            productDto.setQty(rs.getInt("qty"));
+            BrandDto brandDto = new BrandDto();
+            brandDto.setId(rs.getLong("brand_id"));
+            brandDto.setTitle(rs.getString("brand_title"));
+            brandDto.setImgUrl(rs.getString("brand_imgUrl"));
+            productDto.setBrand(brandDto);
+            MapSqlParameterSource categoryParam = new MapSqlParameterSource()
+                    .addValue("PRODUCT_ID", productDto.getId());
+            String GET_CATEGORIES_SQL = "SELECT\n" +
+                    "C.id,\n" +
+                    "C.title,\n" +
+                    "C.img_url\n" +
+                    "FROM category as C\n" +
+                    "INNER JOIN product_category_list as PC\n" +
+                    "on C.id = PC.category_id\n" +
+                    "WHERE PC.product_id = :PRODUCT_ID";
+            List<CategoryDto> categoryDtos = this.namedParameterJdbcTemplate.query(GET_CATEGORIES_SQL, categoryParam, (rs1, rowNum2) -> {
+                CategoryDto categoryDto = new CategoryDto();
+                categoryDto.setId(rs1.getLong("id"));
+                categoryDto.setImgUrl(rs1.getString("img_url"));
+                categoryDto.setTitle(rs1.getString("title"));
+                return categoryDto;
+            });
+            productDto.setCategoryList(categoryDtos);
+            return productDto;
+        });
+        Pageable
+                pageable = PageRequest.of(pageablePage * pageablelimit, pageablelimit);
+        return new PageImpl<>(productDtos, pageable, totalCount);
     }
-
 
 }
