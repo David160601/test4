@@ -2,6 +2,7 @@ package com.example.demo.user;
 
 
 import com.example.demo.user.dto.CreateUserDto;
+import com.example.demo.user.dto.LoginUserDto;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,5 +21,9 @@ public class UserController {
     @PostMapping("/register")
     String registerUser(@RequestBody @Valid CreateUserDto createUserDto) {
         return this.userService.registerUser(createUserDto);
+    }
+    @PostMapping("/login")
+    String loginUser(@RequestBody @Valid LoginUserDto loginUserDto) {
+        return this.userService.loginUser(loginUserDto);
     }
 }
