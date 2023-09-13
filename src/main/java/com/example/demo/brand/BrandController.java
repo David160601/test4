@@ -5,6 +5,7 @@ import com.example.demo.brand.dto.BrandDto;
 import com.example.demo.brand.dto.CreateBrandDto;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class BrandController {
     }
 
     @PostMapping(consumes = {"multipart/form-data"})
+    @PreAuthorize("hasAuthority('ADMIN')")
     public BrandDto createBrand(@ModelAttribute @Valid CreateBrandDto createBrandDto) {
         return this.brandService.createBrand(createBrandDto);
     }
@@ -30,11 +32,13 @@ public class BrandController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     void deleteBrand(@PathVariable("id") long id) {
         this.brandService.deleteBrand(id);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     BrandDto updateBrand(@PathVariable("id") long id, @RequestBody() @Valid BrandDto brandDto) {
         return this.brandService.updateBrand(id, brandDto);
     }

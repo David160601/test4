@@ -4,9 +4,11 @@ package com.example.demo.user;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.List;
 
 
 @Getter
@@ -25,12 +27,11 @@ public class User implements UserDetails {
     private String lastname;
     private String email;
     private String password;
-
+    private Role role;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return null;
+        return List.of(new SimpleGrantedAuthority(role.name()));
     }
-
     @Override
     public String getUsername() {
         return email;
@@ -55,4 +56,9 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+}
+
+enum Role {
+    USER,
+    ADMIN
 }

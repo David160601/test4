@@ -37,6 +37,7 @@ public class UserService implements UserDetailsService {
             throw new ApiRequestException("User already exist", HttpStatus.BAD_REQUEST);
         } else {
             User newUser = new User().builder().firstname(createUserDto.getFirstname())
+                    .role(Role.ADMIN)
                     .lastname(createUserDto.getLastname())
                     .email(createUserDto.getEmail())
                     .password(this.bCryptPasswordEncoder.encode(createUserDto.getPassword())).build();
